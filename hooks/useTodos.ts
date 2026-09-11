@@ -1,80 +1,82 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import type { Todo } from "@/lib/types";
-import { loadTodos, saveTodos } from "@/lib/storage";
+import {
+  fetchTodos,
+  insertTodo,
+  updateTodoCompleted,
+  deleteTodoById,
+  deleteCompletedTodos,
+} from "@/lib/supabase/todos";
 
-// A minimal external store so the todo list can be read with
-// `useSyncExternalStore`, keeping localStorage (read only in the browser)
-// safely out of the render path and avoiding hydration mismatches.
-const EMPTY_TODOS: Todo[] = [];
-
-let todos: Todo[] = EMPTY_TODOS;
-let isInitialized = false;
-const listeners = new Set<() => void>();
-
-function ensureInitialized() {
-  if (isInitialized) return;
-  todos = loadTodos();
-  isInitialized = true;
-}
-
-function setTodos(next: Todo[]) {
-  todos = next;
-  saveTodos(todos);
-  listeners.forEach((listener) => listener());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot() {
-  ensureInitialized();
-  return todos;
-}
-
-function getServerSnapshot() {
-  return EMPTY_TODOS;
-}
-
-function addTodo(title: string) {
-  const trimmed = title.trim();
-  if (!trimmed) return;
-
-  ensureInitialized();
-  const newTodo: Todo = {
-    id: crypto.randomUUID(),
-    title: trimmed,
-    completed: false,
-    createdAt: new Date().toISOString(),
-  };
-  setTodos([...todos, newTodo]);
-}
-
-function toggleTodo(id: string) {
-  ensureInitialized();
-  setTodos(
-    todos.map((todo) =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    )
-  );
-}
-
-function deleteTodo(id: string) {
-  ensureInitialized();
-  setTodos(todos.filter((todo) => todo.id !== id));
-}
-
-function clearCompleted() {
-  ensureInitialized();
-  setTodos(todos.filter((todo) => !todo.completed));
-}
-
-/** Reads and mutates the todo list, kept in sync with localStorage. */
+/** Reads and mutates the todo list stored in Supabase. */
 export function useTodos() {
-  const currentTodos = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return { todos: currentTodos, addTodo, toggleTodo, deleteTodo, clearCompleted };
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchTodos()
+      .then((data) => {
+        if (cancelled) return;
+        setTodos(data);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Couldn't load your todos. Please refresh the page.");
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function addTodo(title: string) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+
+    try {
+      const newTodo = await insertTodo(trimmed);
+      setTodos((prev) => [...prev, newTodo]);
+    } catch {
+      setError("Couldn't add that todo. Please try again.");
+    }
+  }
+
+  async function toggleTodo(id: string) {
+    const target = todos.find((todo) => todo.id === id);
+    if (!target) return;
+
+    try {
+      const updated = await updateTodoCompleted(id, !target.completed);
+      setTodos((prev) => prev.map((todo) => (todo.id === id ? updated : todo)));
+    } catch {
+      setError("Couldn't update that todo. Please try again.");
+    }
+  }
+
+  async function deleteTodo(id: string) {
+    try {
+      await deleteTodoById(id);
+      setTodos((prev) => prev.filter((todo) => todo.id !== id));
+    } catch {
+      setError("Couldn't delete that todo. Please try again.");
+    }
+  }
+
+  async function clearCompleted() {
+    try {
+      await deleteCompletedTodos();
+      setTodos((prev) => prev.filter((todo) => !todo.completed));
+    } catch {
+      setError("Couldn't clear completed todos. Please try again.");
+    }
+  }
+
+  return { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, clearCompleted };
 }

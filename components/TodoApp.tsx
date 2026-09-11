@@ -9,7 +9,8 @@ import TodoList from "./TodoList";
 import TodoStats from "./TodoStats";
 
 export default function TodoApp() {
-  const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted } = useTodos();
+  const { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, clearCompleted } =
+    useTodos();
   const [filter, setFilter] = useState<TodoFilterValue>("all");
 
   const activeCount = useMemo(
@@ -28,14 +29,23 @@ export default function TodoApp() {
     <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 dark:border-zinc-800 dark:bg-zinc-900">
       <header className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          My Todos
+          Todoz 📝
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Stay organized and productive
         </p>
       </header>
 
-      <TodoInput onAdd={addTodo} />
+      {error && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
+
+      <TodoInput onAdd={addTodo} disabled={isLoading} />
 
       {todos.length > 0 && (
         <div className="mt-5 flex items-center justify-between">
@@ -44,7 +54,11 @@ export default function TodoApp() {
       )}
 
       <div className="mt-4">
-        {todos.length === 0 ? (
+        {isLoading ? (
+          <p className="py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            Loading your todos…
+          </p>
+        ) : todos.length === 0 ? (
           <div className="py-10 text-center">
             <p className="font-medium text-zinc-700 dark:text-zinc-300">
               No todos yet
