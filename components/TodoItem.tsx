@@ -1,29 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { Todo } from "@/lib/types";
 
 interface TodoItemProps {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onEditTitle: (id: string, title: string) => void;
+  onEditDueDate: (id: string, dueDate: string | null) => void;
 }
 
-export default function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
+function isOverdue(todo: Todo): boolean {
+  if (!todo.dueDate || todo.completed) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return todo.dueDate < today;
+}
+
+function formatDueDate(dueDate: string): string {
+  const [year, month, day] = dueDate.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export default function TodoItem({
+  todo,
+  onToggle,
+  onDelete,
+  onEditTitle,
+  onEditDueDate,
+}: TodoItemProps) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(todo.title);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const overdue = isOverdue(todo);
+
+  function startEditingTitle() {
+    setTitleDraft(todo.title);
+    setIsEditingTitle(true);
+  }
+
+  function commitTitle() {
+    setIsEditingTitle(false);
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== todo.title) {
+      onEditTitle(todo.id, trimmed);
+    }
+  }
+
+  function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.currentTarget.blur();
+    } else if (event.key === "Escape") {
+      setTitleDraft(todo.title);
+      setIsEditingTitle(false);
+    }
+  }
+
   return (
-    <li className="group flex items-center gap-3 px-1 py-3">
+    <li className="group flex flex-wrap items-center gap-3 px-1 py-3">
       <input
-        id={`todo-${todo.id}`}
         type="checkbox"
         checked={todo.completed}
         onChange={() => onToggle(todo.id)}
+        aria-label={todo.completed ? `Mark "${todo.title}" as active` : `Mark "${todo.title}" as complete`}
         className="h-5 w-5 shrink-0 cursor-pointer rounded border-zinc-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 dark:border-zinc-600 dark:bg-zinc-800"
       />
-      <label
-        htmlFor={`todo-${todo.id}`}
-        className={`flex-1 cursor-pointer break-words text-zinc-900 dark:text-zinc-100 ${
-          todo.completed ? "text-zinc-400 line-through dark:text-zinc-500" : ""
-        }`}
-      >
-        {todo.title}
-      </label>
+
+      <div className="min-w-0 flex-1">
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={titleDraft}
+            autoFocus
+            onChange={(event) => setTitleDraft(event.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={handleTitleKeyDown}
+            className="w-full rounded border border-indigo-400 bg-white px-1.5 py-0.5 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        ) : (
+          <span
+            onDoubleClick={startEditingTitle}
+            title="Double-click to edit"
+            className={`block cursor-text break-words text-zinc-900 dark:text-zinc-100 ${
+              todo.completed ? "text-zinc-400 line-through dark:text-zinc-500" : ""
+            }`}
+          >
+            {todo.title}
+          </span>
+        )}
+
+        {isEditingDate ? (
+          <input
+            type="date"
+            value={todo.dueDate ?? ""}
+            autoFocus
+            onChange={(event) => {
+              onEditDueDate(todo.id, event.target.value || null);
+              setIsEditingDate(false);
+            }}
+            onBlur={() => setIsEditingDate(false)}
+            className="mt-1 rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark]"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsEditingDate(true)}
+            className={`mt-0.5 block text-xs transition-colors hover:underline ${
+              overdue
+                ? "font-medium text-red-500"
+                : "text-zinc-400 dark:text-zinc-500"
+            }`}
+          >
+            {todo.dueDate
+              ? `${overdue ? "Overdue: " : "Due "}${formatDueDate(todo.dueDate)}`
+              : "+ Add due date"}
+          </button>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={() => onDelete(todo.id)}
