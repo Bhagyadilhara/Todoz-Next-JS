@@ -184,6 +184,26 @@ export function useTodos() {
     }
   }
 
+  /** Marks every given todo completed/active in one go. */
+  async function completeMany(ids: string[], completed: boolean) {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+
+    try {
+      await Promise.all(ids.map((id) => updateTodo(id, { completed })));
+      setTodos((prev) =>
+        prev.map((todo) => (idSet.has(todo.id) ? { ...todo, completed } : todo))
+      );
+    } catch {
+      setError("Couldn't update some of the selected todos. Please try again.");
+    }
+  }
+
+  /** Deletes every given todo, each with its own undo window. */
+  function deleteMany(ids: string[]) {
+    ids.forEach((id) => deleteTodo(id));
+  }
+
   return {
     todos,
     isLoading,
@@ -197,5 +217,7 @@ export function useTodos() {
     deleteTodo,
     undoDelete,
     clearCompleted,
+    completeMany,
+    deleteMany,
   };
 }

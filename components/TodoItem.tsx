@@ -12,6 +12,9 @@ interface TodoItemProps {
   onEditTitle: (id: string, title: string) => void;
   onEditDueDate: (id: string, dueDate: string | null) => void;
   onEditPriority: (id: string, priority: Todo["priority"]) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelectToggle?: (id: string) => void;
 }
 
 function isOverdue(todo: Todo): boolean {
@@ -35,6 +38,9 @@ export default function TodoItem({
   onEditTitle,
   onEditDueDate,
   onEditPriority,
+  selectionMode = false,
+  selected = false,
+  onSelectToggle,
 }: TodoItemProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
@@ -65,6 +71,15 @@ export default function TodoItem({
 
   return (
     <li className="group flex flex-wrap items-center gap-3 px-1 py-3">
+      {selectionMode && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onSelectToggle?.(todo.id)}
+          aria-label={`Select "${todo.title}"`}
+          className="h-5 w-5 shrink-0 cursor-pointer rounded border-indigo-400 text-indigo-600 focus:ring-2 focus:ring-indigo-500/50 dark:border-indigo-600 dark:bg-zinc-800"
+        />
+      )}
       <input
         type="checkbox"
         checked={todo.completed}

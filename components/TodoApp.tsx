@@ -9,6 +9,7 @@ import TodoFilter from "./TodoFilter";
 import TodoList from "./TodoList";
 import TodoStats from "./TodoStats";
 import UndoToast from "./UndoToast";
+import BulkActionBar from "./BulkActionBar";
 
 export default function TodoApp() {
   const {
@@ -24,9 +25,14 @@ export default function TodoApp() {
     deleteTodo,
     undoDelete,
     clearCompleted,
+    completeMany,
+    deleteMany,
   } = useTodos();
   const [filter, setFilter] = useState<TodoFilterValue>("all");
   const [sort, setSort] = useState<TodoSort>("created");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut: press "n" anywhere (outside of a text field) to jump
@@ -62,6 +68,9 @@ export default function TodoApp() {
     if (filter === "active") list = list.filter((todo) => !todo.completed);
     if (filter === "completed") list = list.filter((todo) => todo.completed);
 
+    const query = searchQuery.trim().toLowerCase();
+    if (query) list = list.filter((todo) => todo.title.toLowerCase().includes(query));
+
     if (sort === "dueDate") {
       list = [...list].sort((a, b) => {
         if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
@@ -77,7 +86,40 @@ export default function TodoApp() {
     }
 
     return list;
-  }, [todos, filter, sort]);
+  }, [todos, filter, sort, searchQuery]);
+
+  function toggleSelecting() {
+    setIsSelecting((prev) => !prev);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const allVisibleSelected =
+    visibleTodos.length > 0 && visibleTodos.every((todo) => selectedIds.has(todo.id));
+
+  function toggleSelectAll() {
+    setSelectedIds(allVisibleSelected ? new Set() : new Set(visibleTodos.map((t) => t.id)));
+  }
+
+  function handleBulkComplete(completed: boolean) {
+    completeMany([...selectedIds], completed);
+    setIsSelecting(false);
+    setSelectedIds(new Set());
+  }
+
+  function handleBulkDelete() {
+    deleteMany([...selectedIds]);
+    setIsSelecting(false);
+    setSelectedIds(new Set());
+  }
 
   return (
     <>
@@ -103,21 +145,64 @@ export default function TodoApp() {
         <TodoInput ref={inputRef} onAdd={addTodo} disabled={isLoading} />
 
         {todos.length > 0 && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-            <TodoFilter filter={filter} onChange={setFilter} />
-            <button
-              type="button"
-              onClick={() =>
-                setSort((prev) =>
-                  prev === "created" ? "dueDate" : prev === "dueDate" ? "priority" : "created"
-                )
-              }
-              className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            >
-              Sort:{" "}
-              {sort === "created" ? "Newest" : sort === "dueDate" ? "Due date" : "Priority"}
-            </button>
-          </div>
+          <>
+            <label htmlFor="search-todos" className="sr-only">
+              Search todos
+            </label>
+            <input
+              id="search-todos"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search todos…"
+              className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            />
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <TodoFilter filter={filter} onChange={setFilter} />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSort((prev) =>
+                      prev === "created"
+                        ? "dueDate"
+                        : prev === "dueDate"
+                          ? "priority"
+                          : "created"
+                    )
+                  }
+                  className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  Sort:{" "}
+                  {sort === "created" ? "Newest" : sort === "dueDate" ? "Due date" : "Priority"}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSelecting}
+                  className={`rounded-md px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${
+                    isSelecting
+                      ? "bg-indigo-600 text-white"
+                      : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  Select
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isSelecting && (
+          <BulkActionBar
+            count={selectedIds.size}
+            allSelected={allVisibleSelected}
+            onToggleSelectAll={toggleSelectAll}
+            onComplete={() => handleBulkComplete(true)}
+            onActivate={() => handleBulkComplete(false)}
+            onDelete={handleBulkDelete}
+            onCancel={toggleSelecting}
+          />
         )}
 
         <div className="mt-4">
@@ -137,7 +222,7 @@ export default function TodoApp() {
           ) : visibleTodos.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                No todos in this filter.
+                {searchQuery ? "No todos match your search." : "No todos in this filter."}
               </p>
             </div>
           ) : (
@@ -148,6 +233,9 @@ export default function TodoApp() {
               onEditTitle={editTitle}
               onEditDueDate={editDueDate}
               onEditPriority={editPriority}
+              selectionMode={isSelecting}
+              selectedIds={selectedIds}
+              onSelectToggle={toggleSelected}
             />
           )}
         </div>

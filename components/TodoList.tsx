@@ -8,6 +8,9 @@ interface TodoListProps {
   onEditTitle: (id: string, title: string) => void;
   onEditDueDate: (id: string, dueDate: string | null) => void;
   onEditPriority: (id: string, priority: TodoPriority) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelectToggle?: (id: string) => void;
 }
 
 export default function TodoList({
@@ -17,6 +20,9 @@ export default function TodoList({
   onEditTitle,
   onEditDueDate,
   onEditPriority,
+  selectionMode = false,
+  selectedIds,
+  onSelectToggle,
 }: TodoListProps) {
   return (
     <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -29,6 +35,9 @@ export default function TodoList({
           onEditTitle={onEditTitle}
           onEditDueDate={onEditDueDate}
           onEditPriority={onEditPriority}
+          selectionMode={selectionMode}
+          selected={selectedIds?.has(todo.id)}
+          onSelectToggle={onSelectToggle}
         />
       ))}
     </ul>
