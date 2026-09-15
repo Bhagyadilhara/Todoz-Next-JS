@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Todo } from "@/lib/types";
+import type { Todo, TodoPriority } from "@/lib/types";
 import {
   fetchTodos,
   insertTodo,
@@ -82,12 +82,16 @@ export function useTodos() {
     };
   }, []);
 
-  async function addTodo(title: string, dueDate: string | null = null) {
+  async function addTodo(
+    title: string,
+    dueDate: string | null = null,
+    priority: TodoPriority = "medium"
+  ) {
     const trimmed = title.trim();
     if (!trimmed) return;
 
     try {
-      const newTodo = await insertTodo(trimmed, dueDate);
+      const newTodo = await insertTodo(trimmed, dueDate, priority);
       setTodos((prev) =>
         prev.some((todo) => todo.id === newTodo.id) ? prev : [...prev, newTodo]
       );
@@ -126,6 +130,15 @@ export function useTodos() {
       setTodos((prev) => prev.map((todo) => (todo.id === id ? updated : todo)));
     } catch {
       setError("Couldn't update the due date. Please try again.");
+    }
+  }
+
+  async function editPriority(id: string, priority: TodoPriority) {
+    try {
+      const updated = await updateTodo(id, { priority });
+      setTodos((prev) => prev.map((todo) => (todo.id === id ? updated : todo)));
+    } catch {
+      setError("Couldn't update the priority. Please try again.");
     }
   }
 
@@ -180,6 +193,7 @@ export function useTodos() {
     toggleTodo,
     editTitle,
     editDueDate,
+    editPriority,
     deleteTodo,
     undoDelete,
     clearCompleted,

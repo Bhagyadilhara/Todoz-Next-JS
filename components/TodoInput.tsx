@@ -2,9 +2,11 @@
 
 import { forwardRef, useState } from "react";
 import type { FormEvent } from "react";
+import type { TodoPriority } from "@/lib/types";
+import { PRIORITY_ORDER, PRIORITY_LABELS } from "@/lib/priority";
 
 interface TodoInputProps {
-  onAdd: (title: string, dueDate: string | null) => void;
+  onAdd: (title: string, dueDate: string | null, priority: TodoPriority) => void;
   disabled?: boolean;
 }
 
@@ -14,14 +16,16 @@ const TodoInput = forwardRef<HTMLInputElement, TodoInputProps>(function TodoInpu
 ) {
   const [value, setValue] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<TodoPriority>("medium");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!value.trim()) return;
 
-    onAdd(value, dueDate || null);
+    onAdd(value, dueDate || null, priority);
     setValue("");
     setDueDate("");
+    setPriority("medium");
   }
 
   return (
@@ -51,6 +55,22 @@ const TodoInput = forwardRef<HTMLInputElement, TodoInputProps>(function TodoInpu
         disabled={disabled}
         className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:[color-scheme:dark]"
       />
+      <label htmlFor="new-todo-priority" className="sr-only">
+        Priority
+      </label>
+      <select
+        id="new-todo-priority"
+        value={priority}
+        onChange={(event) => setPriority(event.target.value as TodoPriority)}
+        disabled={disabled}
+        className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+      >
+        {PRIORITY_ORDER.map((value) => (
+          <option key={value} value={value}>
+            {PRIORITY_LABELS[value]}
+          </option>
+        ))}
+      </select>
       <button
         type="submit"
         disabled={disabled}

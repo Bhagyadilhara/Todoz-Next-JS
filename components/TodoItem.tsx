@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { Todo } from "@/lib/types";
+import { PRIORITY_LABELS, PRIORITY_BADGE_CLASSES, nextPriority } from "@/lib/priority";
 
 interface TodoItemProps {
   todo: Todo;
@@ -10,6 +11,7 @@ interface TodoItemProps {
   onDelete: (id: string) => void;
   onEditTitle: (id: string, title: string) => void;
   onEditDueDate: (id: string, dueDate: string | null) => void;
+  onEditPriority: (id: string, priority: Todo["priority"]) => void;
 }
 
 function isOverdue(todo: Todo): boolean {
@@ -32,6 +34,7 @@ export default function TodoItem({
   onDelete,
   onEditTitle,
   onEditDueDate,
+  onEditPriority,
 }: TodoItemProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(todo.title);
@@ -71,27 +74,38 @@ export default function TodoItem({
       />
 
       <div className="min-w-0 flex-1">
-        {isEditingTitle ? (
-          <input
-            type="text"
-            value={titleDraft}
-            autoFocus
-            onChange={(event) => setTitleDraft(event.target.value)}
-            onBlur={commitTitle}
-            onKeyDown={handleTitleKeyDown}
-            className="w-full rounded border border-indigo-400 bg-white px-1.5 py-0.5 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:bg-zinc-800 dark:text-zinc-100"
-          />
-        ) : (
-          <span
-            onDoubleClick={startEditingTitle}
-            title="Double-click to edit"
-            className={`block cursor-text break-words text-zinc-900 dark:text-zinc-100 ${
-              todo.completed ? "text-zinc-400 line-through dark:text-zinc-500" : ""
-            }`}
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={titleDraft}
+              autoFocus
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={handleTitleKeyDown}
+              className="min-w-0 flex-1 rounded border border-indigo-400 bg-white px-1.5 py-0.5 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+          ) : (
+            <span
+              onDoubleClick={startEditingTitle}
+              title="Double-click to edit"
+              className={`min-w-0 cursor-text break-words text-zinc-900 dark:text-zinc-100 ${
+                todo.completed ? "text-zinc-400 line-through dark:text-zinc-500" : ""
+              }`}
+            >
+              {todo.title}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onEditPriority(todo.id, nextPriority(todo.priority))}
+            title="Click to change priority"
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 ${PRIORITY_BADGE_CLASSES[todo.priority]}`}
           >
-            {todo.title}
-          </span>
-        )}
+            {PRIORITY_LABELS[todo.priority]}
+          </button>
+        </div>
 
         {isEditingDate ? (
           <input

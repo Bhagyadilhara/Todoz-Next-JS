@@ -1,5 +1,5 @@
 import { supabase } from "./client";
-import type { Todo } from "../types";
+import type { Todo, TodoPriority } from "../types";
 
 interface TodoRow {
   id: string;
@@ -7,9 +7,10 @@ interface TodoRow {
   completed: boolean;
   created_at: string;
   due_date: string | null;
+  priority: TodoPriority;
 }
 
-const TODO_COLUMNS = "id, title, completed, created_at, due_date";
+const TODO_COLUMNS = "id, title, completed, created_at, due_date, priority";
 
 function mapRow(row: TodoRow): Todo {
   return {
@@ -18,6 +19,7 @@ function mapRow(row: TodoRow): Todo {
     completed: row.completed,
     createdAt: row.created_at,
     dueDate: row.due_date,
+    priority: row.priority,
   };
 }
 
@@ -33,11 +35,12 @@ export async function fetchTodos(): Promise<Todo[]> {
 
 export async function insertTodo(
   title: string,
-  dueDate: string | null
+  dueDate: string | null,
+  priority: TodoPriority = "medium"
 ): Promise<Todo> {
   const { data, error } = await supabase
     .from("todos")
-    .insert({ title, due_date: dueDate })
+    .insert({ title, due_date: dueDate, priority })
     .select(TODO_COLUMNS)
     .single();
 
@@ -49,6 +52,7 @@ interface TodoUpdates {
   title?: string;
   completed?: boolean;
   dueDate?: string | null;
+  priority?: TodoPriority;
 }
 
 export async function updateTodo(id: string, updates: TodoUpdates): Promise<Todo> {
@@ -58,6 +62,7 @@ export async function updateTodo(id: string, updates: TodoUpdates): Promise<Todo
       ...(updates.title !== undefined && { title: updates.title }),
       ...(updates.completed !== undefined && { completed: updates.completed }),
       ...(updates.dueDate !== undefined && { due_date: updates.dueDate }),
+      ...(updates.priority !== undefined && { priority: updates.priority }),
     })
     .eq("id", id)
     .select(TODO_COLUMNS)

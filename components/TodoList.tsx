@@ -1,4 +1,4 @@
-import type { Todo } from "@/lib/types";
+import type { Todo, TodoPriority } from "@/lib/types";
 import TodoItem from "./TodoItem";
 
 interface TodoListProps {
@@ -7,6 +7,7 @@ interface TodoListProps {
   onDelete: (id: string) => void;
   onEditTitle: (id: string, title: string) => void;
   onEditDueDate: (id: string, dueDate: string | null) => void;
+  onEditPriority: (id: string, priority: TodoPriority) => void;
 }
 
 export default function TodoList({
@@ -15,6 +16,7 @@ export default function TodoList({
   onDelete,
   onEditTitle,
   onEditDueDate,
+  onEditPriority,
 }: TodoListProps) {
   return (
     <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -26,6 +28,7 @@ export default function TodoList({
           onDelete={onDelete}
           onEditTitle={onEditTitle}
           onEditDueDate={onEditDueDate}
+          onEditPriority={onEditPriority}
         />
       ))}
     </ul>

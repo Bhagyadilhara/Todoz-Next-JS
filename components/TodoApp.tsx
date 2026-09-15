@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TodoFilter as TodoFilterValue, TodoSort } from "@/lib/types";
 import { useTodos } from "@/hooks/useTodos";
+import { PRIORITY_ORDER } from "@/lib/priority";
 import TodoInput from "./TodoInput";
 import TodoFilter from "./TodoFilter";
 import TodoList from "./TodoList";
@@ -19,6 +20,7 @@ export default function TodoApp() {
     toggleTodo,
     editTitle,
     editDueDate,
+    editPriority,
     deleteTodo,
     undoDelete,
     clearCompleted,
@@ -67,6 +69,11 @@ export default function TodoApp() {
         if (b.dueDate) return 1;
         return a.createdAt.localeCompare(b.createdAt);
       });
+    } else if (sort === "priority") {
+      list = [...list].sort((a, b) => {
+        const diff = PRIORITY_ORDER.indexOf(b.priority) - PRIORITY_ORDER.indexOf(a.priority);
+        return diff !== 0 ? diff : a.createdAt.localeCompare(b.createdAt);
+      });
     }
 
     return list;
@@ -100,10 +107,15 @@ export default function TodoApp() {
             <TodoFilter filter={filter} onChange={setFilter} />
             <button
               type="button"
-              onClick={() => setSort((prev) => (prev === "created" ? "dueDate" : "created"))}
+              onClick={() =>
+                setSort((prev) =>
+                  prev === "created" ? "dueDate" : prev === "dueDate" ? "priority" : "created"
+                )
+              }
               className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
-              Sort: {sort === "created" ? "Newest" : "Due date"}
+              Sort:{" "}
+              {sort === "created" ? "Newest" : sort === "dueDate" ? "Due date" : "Priority"}
             </button>
           </div>
         )}
@@ -135,6 +147,7 @@ export default function TodoApp() {
               onDelete={deleteTodo}
               onEditTitle={editTitle}
               onEditDueDate={editDueDate}
+              onEditPriority={editPriority}
             />
           )}
         </div>
